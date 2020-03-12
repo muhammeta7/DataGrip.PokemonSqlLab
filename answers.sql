@@ -57,29 +57,27 @@ WHERE pokelevel = 100
 GROUP BY trainerID;
 
 # How many pokemon only belong to one trainer and no other?
-SELECT DISTINCT pokemon_id, 
+SELECT DISTINCT pokemon_id,
 COUNT(*) FROM pokemon_trainer
 GROUP BY pokemon_id HAVING count(*) = 1;
 
 ### Part 4 FINAL Report
 #######################################################
-SELECT pokemons.name AS Pokemon_Name, trainers.trainername AS Trainer_Name,
-pokemon_trainer.pokelevel AS Level,primary_type.name AS Primary_Type,
-secondary_type.name AS Secondary_Type
+SELECT DISTINCT GROUP_CONCAT(p.name) AS Pokemon, tr.trainername AS Trainer,
+GROUP_CONCAT(pt.pokelevel) AS PokeLevels, GROUP_CONCAT(t.name) AS Primary_Types,
+GROUP_CONCAT(s.name) AS Secondary_Types, Stats.total
+FROM pokemon_trainer pt
+JOIN (
+      SELECT trainerID, AVG(pokelevel + hp + maxhp + attack + defense + spatk + spdef + speed) AS total
+      FROM pokemon_trainer
+      GROUP BY trainerID
+) AS Stats ON Stats.trainerID = pt.trainerID
+JOIN pokemons p ON p.id = pt.pokemon_id
+JOIN trainers tr ON tr.trainerID = pt.trainerID
+JOIN types t ON t.id = p.primary_type
+JOIN types s ON s.id = p.secondary_type
+GROUP BY Stats.total, tr.trainerID, tr.trainername
+ORDER BY Stats.total DESC;
 
-FROM pokemons
-JOIN pokemon_trainer ON pokemons.id = pokemon_trainer.pokemon_id
-JOIN trainers ON trainers.trainerID = pokemon_trainer.trainerID
-JOIN types primary_type ON pokemons.primary_type = primary_type.id
-JOIN types secondary_type ON pokemons.secondary_type = secondary_type.id
-
-SELECT (pokelevel + hp + maxhp + attack + defense + spatk + spdef + speed) AS Stats
-FROM pokemon_trainer
-JOIN trainers ON pokemon_trainer.trainerID = trainers.trainerID
-GROUP BY pokemon_trainer.trainerID
-ORDER BY Stats;
-
-# This defines the strongest trainer as the trainer with the highest total stats.
-# Total stats for each Pokemon are calculated by getting the sum of its hp, maxhp,
-# attack, defense, spatk, spdef, speed, and pokelevel.  The trainers total stats
-# is the sum of all of their Pokemons total stats.
+# Reasoning: I took the averages of all the pokemons stats including level, attack, defense...etc
+# and whichever trainer had the highest average for their pokemon determines their rank.
